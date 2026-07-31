@@ -1,59 +1,50 @@
-# Mersin Üniversitesi — Mezun Takip Anket Sistemi
+# MERSİN ÜNİVERSİTESİ — MEZUN TAKİP VE BİLGİ SİSTEMİ (ALUMNI TRACKING SYSTEM)
 
-Go (Gin + GORM + PostgreSQL) backend ve React (Vite + TS + Mantine) frontend'den oluşan,
-50 soruluk mezun anketini 5 adımlı bir Stepper/Wizard olarak sunan tam yığın uygulama.
+Bu doküman, Mersin Üniversitesi Mühendislik Fakültesi staj programı kapsamında kurumun ihtiyaçlarına yönelik olarak tasarlanan ve geliştirilen **Mezun Takip ve Anket Sistemi'nin** teknik altyapısını, mimari kararlarını ve kurulum süreçlerini içermektedir.
 
-```
-mezun-anket-sistemi/
-├── backend/     Go API, DB-üzeri asenkron mail kuyruğu, şifreleme, seed
-├── frontend/    React SPA - kişiselleştirilmiş karşılama, stepper anket, admin dashboard
-└── mezun-anket-mimari.md   Ayrıntılı mimari/tasarım dokümanı
-```
+## 1. PROJENİN KAPSAMI VE AMACI (NE YAPTIK?)
 
-## Hızlı başlangıç
+Mersin Üniversitesi mezunlarının kariyer yollarını izlemek, istihdam sürelerini analiz etmek ve üniversitede verilen eğitimin sektörel karşılığını istatistiksel olarak ölçmek amacıyla **Tam Yığın (Full-Stack) bir web uygulaması** geliştirilmiştir. 
 
+Proje, manuel olarak yürütülen veya üçüncü parti (Google Forms vb.) yazılımlarla sağlanan anket süreçlerini, üniversitenin kendi sunucularında barındırabileceği, veri güvenliğini sağlayan ve özel istatistikler üretebilen kapalı bir ekosisteme taşımaktadır.
+
+---
+
+## 2. MİMARİ TASARIM KARARLARI (NEDEN VE NASIL YAPTIK?)
+
+Uygulama; ölçeklenebilirlik, veri tutarlılığı ve bağımsız geliştirme/dağıtım (loose coupling) ilkeleri göz önünde bulundurularak "İstemci-Sunucu İzolasyonu" (Client-Server Separation) mimarisine göre tasarlanmıştır.
+
+### 2.1. Sunucu Katmanı (Backend API & Worker)
+*   **Teknoloji:** Go (Golang) & Gin Web Framework
+*   **Neden Seçildi?** Go dilinin eşzamanlılık (concurrency) yetenekleri, düşük bellek tüketimi ve yüksek I/O performansı nedeniyle tercih edilmiştir. Özellikle arka planda çalışacak olan "Mail Worker" sisteminin ana HTTP iş parçacıklarını (thread) bloklamaması için Go Goroutines kullanılmıştır.
+*   **Nasıl Kurgulandı?** RESTful API mimarisi standartlarına (JSON payload, HTTP statü kodları) uygun olarak yapılandırılmıştır. Veritabanı işlemleri için GORM kullanılarak SQL Injection zafiyetleri önlenmiş ve nesne-ilişkisel eşleme (ORM) sağlanmıştır.
+
+### 2.2. İstemci Katmanı (Frontend)
+*   **Teknoloji:** React (Vite altyapısı), TypeScript, Mantine UI
+*   **Neden Seçildi?** 50 soruluk karmaşık bir anketin durum yönetimini (state management) sayfa yenilenmeden yapabilmek için React (Single Page Application) kullanılmıştır. Tip güvenliğini (type safety) sağlamak ve çalışma zamanı (runtime) hatalarını minimuma indirmek amacıyla TypeScript tercih edilmiştir.
+*   **Nasıl Kurgulandı?** Kullanıcı deneyimini (UX) artırmak adına anket, dinamik adımlar (Stepper) halinde bölünmüştür. Her adım geçişinde veriler asenkron (AJAX/Fetch) olarak sunucuya iletilerek, kullanıcının anketi yarıda bırakması durumunda "veri kaybı" yaşanmasının önüne geçilmiştir.
+
+### 2.3. Sistem Dağıtımı ve İzolasyon (DevOps)
+*   **Teknoloji:** Docker, Docker Compose, Nginx
+*   **Neden Seçildi?** Projenin farklı geliştirici bilgisayarlarında ("Benim bilgisayarımda çalışıyordu" problemini önlemek) ve sunucularda birebir aynı ortamda çalışmasını garanti altına almak için Docker kullanılmıştır.
+*   **Nasıl Kurgulandı?** Veritabanı, Backend ve Frontend için ayrı konteynerler (containers) oluşturulmuştur. Frontend istekleri Nginx üzerinden "Reverse Proxy" (Ters Vekil Sunucu) ile yönetilerek API'ye yönlendirilmiş, böylece olası CORS problemlerinin önüne geçilmiş ve yük dağıtımı için altyapı hazırlanmıştır.
+
+---
+
+## 3. TEMEL SİSTEM MODÜLLERİ
+
+1.  **Dinamik Anket ve Veri Kurtarma (Stepper/Wizard):** Mezun anketi doldururken, bağlantı kopsa dahi veriler adım bazlı (step-by-step) kaydedilir.
+2.  **Terk (Bounce Rate) Analizi:** Yöneticiler, anketi yarıda bırakan mezunların istatistiksel olarak en çok hangi soruda/adımda sistemi terk ettiğini analiz edebilir.
+3.  **Asenkron E-Posta Kuyruğu (Mail Worker):** Mezunlara gönderilecek davet veya hatırlatma e-postaları ana akışı yavaşlatmamak adına bir kuyruğa (outbox table) yazılır. Arka planda çalışan ayrı bir Goroutine, 15 saniyede bir bu kuyruğu tarayarak SMTP üzerinden iletimi asenkron olarak gerçekleştirir.
+4.  **JWT Tabanlı Güvenlik:** Yönetim paneline erişim, durumsuz (stateless) ve zaman aşımı mekanizmasına sahip JSON Web Token (JWT) ile güvence altına alınmıştır.
+
+---
+
+## 4. KURULUM VE TEST ORTAMI (LOCAL DEVELOPMENT)
+
+Projeyi yerel ortamda çalıştırmak için aşağıdaki adımların sırasıyla uygulanması gerekmektedir.
+
+### 4.1. Deponun Klonlanması
 ```bash
-# 1) Veritabanı
-docker run --name mezun-anket-db -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=mezun_anket -p 5432:5432 -d postgres:16
-
-# 2) Backend
-cd backend
-cp .env.example .env
-# .env içine: openssl rand -hex 32  çıktısını ENCRYPTION_KEY olarak yapıştırın
-go mod tidy
-go run ./cmd/api
-# ayrı bir terminalde ilk admin kullanıcısını oluşturun:
-go run ./cmd/createadmin -username=admin -password=guclu-bir-sifre -role=admin
-
-# 3) Frontend
-cd ../frontend
-npm install
-npm run dev
-```
-
-Frontend: http://localhost:5173 · Backend: http://localhost:8080
-
-## Öne çıkan mimari kararlar
-
-- **Veri minimizasyonu**: OBS'den soyad gelmiyor, sistem de tutmuyor; kimlik alanı hash string.
-- **Şifreleme**: Telefon/e-posta DB'de AES-256-GCM ile şifreli (`bytea`); decrypt sadece
-  yetkili servis çağrılarında (mail gönderimi, admin görüntüleme) yapılır.
-- **Harici kuyruk yok**: Asenkron mail gönderimi tamamen PostgreSQL üzerinde
-  (`email_outboxes` tablosu + `SELECT ... FOR UPDATE SKIP LOCKED`) — Redis/RabbitMQ/BullMQ
-  gerekmez.
-- **Standart hata formatı**: Tüm API yanıtları `{success, data}` veya
-  `{success:false, error:{code,message,details}}` zarfında; 400/401/403/404/409/500
-  kodları frontend'de tek bir axios interceptor'da yönetilir.
-- **Bounce oranını düşürme**: 50 soru tek sayfada değil, 5 kategoriye bölünmüş Stepper +
-  üstte ilerleme çubuğu; her adım autosave edilir, kaldığı adımdan devam edilebilir.
-
-## Derleme/test notu
-
-Bu geliştirme ortamında internet erişimi olmadığından (`go mod tidy`, `npm install`
-paket indirme gerektirir) kod bu ortamda derlenip test edilememiştir. Lütfen kendi
-makinenizde `go build ./...` ve `npm run build` ile doğrulayın; küçük tip/import
-düzeltmeleri gerekebilir.
-
-Ayrıntılı mimari, veri modeli, API uç nokta listesi ve tasarım gerekçeleri için
-`mezun-anket-mimari.md` dosyasına bakınız.
+git clone [https://github.com/zeynepbetulyilmaz/mezun-anket-sistemi.git](https://github.com/zeynepbetulyilmaz/mezun-anket-sistemi.git)
+cd mezun-anket-sistemi
