@@ -1,0 +1,6 @@
+.env
+*.exe
+/tmp
+.vs/
+node_modules/
+dist/

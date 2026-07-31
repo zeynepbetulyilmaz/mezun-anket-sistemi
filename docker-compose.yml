@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  postgres-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mezun_anket_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build: 
+      context: ./backend
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=postgres-db
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=mezun_anket_db
+      - ENCRYPTION_KEY=cokgizliveuzunbiranahtarkelimesi # <-- BU SATIRI EKLE
+    depends_on:
+      - postgres-db
+  frontend:
+    build: 
+      context: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
