@@ -11,6 +11,7 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    restart: always
 
   backend:
     build: 
@@ -22,9 +23,11 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=password
       - DB_NAME=mezun_anket_db
-      - ENCRYPTION_KEY=cokgizliveuzunbiranahtarkelimesi # <-- BU SATIRI EKLE
+      - ENCRYPTION_KEY=3f8a9b2c1d4e7f605a9c8b7d6e2f1a0b3f8a9b2c1d4e7f605a9c8b7d6e2f1a0b
     depends_on:
       - postgres-db
+    restart: always
+
   frontend:
     build: 
       context: ./frontend
@@ -32,6 +35,7 @@ services:
       - "5173:80"
     depends_on:
       - backend
+    restart: always
 
 volumes:
   pgdata:

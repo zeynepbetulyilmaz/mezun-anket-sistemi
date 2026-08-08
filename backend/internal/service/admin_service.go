@@ -2,6 +2,7 @@ package service
 
 import (
 	"gorm.io/gorm"
+	"mezun-anket-backend/internal/domain"
 )
 
 type AdminService struct {
@@ -75,4 +76,30 @@ func (a *AdminService) QuestionDistribution(questionCode string) ([]Distribution
 		Order("count DESC").
 		Scan(&items).Error
 	return items, err
+}
+
+// GetSettings: Veritabanından ayarları çeker ve map formatına çevirir
+func (s *AdminService) GetSettings() (map[string]string, error) {
+	var settings []domain.AppSetting
+	if err := s.db.Find(&settings).Error; err != nil {
+		return nil, err
+	}
+
+	settingsMap := make(map[string]string)
+	for _, setting := range settings {
+		settingsMap[setting.Key] = setting.Value
+	}
+	return settingsMap, nil
+}
+
+// UpdateSettings: Yeni ayarları veritabanına kaydeder (Upsert mantığı)
+func (s *AdminService) UpdateSettings(payload map[string]string) error {
+	for key, value := range payload {
+		setting := domain.AppSetting{Key: key, Value: value}
+		// GORM Save metodu primary key (Key) varsa günceller, yoksa yeni ekler
+		if err := s.db.Save(&setting).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }

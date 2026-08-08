@@ -5,8 +5,9 @@ import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import { adminTokenStorage } from "../../api/client";
 
 const NAV_ITEMS = [
-  { label: "Panel", path: "/admin" },
-  { label: "Mezun Ekle", path: "/admin/mezun-ekle" },
+    { label: "Panel", path: "/admin" },
+    { label: "Mezun Ekle", path: "/admin/mezun-ekle" },
+    { label: "Mail & Davetiye", path: "/admin/send-invites" }, 
 ];
 
 export default function AdminLayout() {

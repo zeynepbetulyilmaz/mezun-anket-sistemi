@@ -39,3 +39,29 @@ func (h *AdminHandler) QuestionDistribution(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, middleware.SuccessEnvelope(items))
 }
+
+// GET /api/v1/admin/settings -> Sistem ayarlarını getirir
+func (h *AdminHandler) GetSettings(c *gin.Context) {
+	settingsMap, err := h.admin.GetSettings()
+	if err != nil {
+		middleware.Fail(c, apperror.Internal("Ayarlar yüklenemedi."))
+		return
+	}
+	c.JSON(http.StatusOK, middleware.SuccessEnvelope(settingsMap))
+}
+
+// POST /api/v1/admin/settings -> Sistem ayarlarını günceller
+func (h *AdminHandler) UpdateSettings(c *gin.Context) {
+	var payload map[string]string
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		middleware.Fail(c, apperror.BadRequest("Geçersiz veri formatı."))
+		return
+	}
+
+	if err := h.admin.UpdateSettings(payload); err != nil {
+		middleware.Fail(c, apperror.Internal("Ayarlar kaydedilemedi."))
+		return
+	}
+
+	c.JSON(http.StatusOK, middleware.SuccessEnvelope("Ayarlar başarıyla güncellendi!"))
+}

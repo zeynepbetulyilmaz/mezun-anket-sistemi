@@ -28,8 +28,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Backend'in standart zarfı: { success, data } | { success:false, error:{code,message,details} }
-// Bu interceptor 400/401/403/404/409/500 kodlarını mimariye uygun tek noktadan yönetir.
+
 export interface StandardizedError extends Error {
   code: string;
   details?: ApiErrorPayload["details"];
@@ -47,7 +46,7 @@ api.interceptors.response.use(
 
     switch (status) {
       case 401:
-        // Oturum geçersiz/süresi dolmuş: token'ları temizleyip giriş ekranına yönlendir.
+
         tokenStorage.clear();
         adminTokenStorage.clear();
         if (!window.location.pathname.startsWith("/admin")) {
@@ -57,7 +56,7 @@ api.interceptors.response.use(
         }
         break;
       case 403:
-        // Yetkisiz - çağıran taraf genelde bir uyarı gösterir.
+
         break;
       case 400:
       case 404:

@@ -65,6 +65,7 @@ func main() {
 	surveyHandler := handler.NewSurveyHandler(surveySvc, mailSvc)
 	adminHandler := handler.NewAdminHandler(adminSvc)
 	importHandler := handler.NewImportHandler(importSvc, mailSvc, cfg.InviteBaseURL)
+	adminMailHandler := handler.NewAdminMailHandler(mailSvc)
 
 	// --- Mail worker: harici kuyruk teknolojisi olmadan, DB üzerinde ---
 	smtpClient := mail.NewSMTPClient(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPassword, cfg.SMTPFrom)
@@ -101,13 +102,19 @@ func main() {
 		}
 
 		// Admin tarafı - JWT + rol zorunlu
-		admin := api.Group("/admin")
-		admin.Use(middleware.RequireAdminAuth(cfg.JWTSecret, "admin", "viewer"))
-		{
-			admin.GET("/stats/overview", adminHandler.Overview)
-			admin.GET("/stats/question/:code", adminHandler.QuestionDistribution)
-			admin.POST("/graduates/import", importHandler.Import)
-		}
+admin := api.Group("/admin")
+
+// Senin halihazırda kurduğun, güvenli rol bazlı yetkilendirme duvarı
+admin.Use(middleware.RequireAdminAuth(cfg.JWTSecret, "admin", "viewer"))
+{
+    // Mevcut Rotaların
+    admin.GET("/stats/overview", adminHandler.Overview)
+    admin.GET("/stats/question/:code", adminHandler.QuestionDistribution)
+    admin.POST("/graduates/import", importHandler.Import)
+    
+    // YENİ EKLENEN: Filtreli Mail Gönderim Rotası
+    admin.POST("/mail/send-invites", adminMailHandler.SendInvites)
+}
 	}
 
 	srv := &http.Server{Addr: ":" + cfg.Port, Handler: r}
@@ -146,3 +153,6 @@ func corsMiddleware(allowedOrigins string) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+adminGroup.GET("/settings", adminHandler.GetSettings)
+adminGroup.POST("/settings", adminHandler.UpdateSettings)

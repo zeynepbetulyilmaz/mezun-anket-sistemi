@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
 	"mezun-anket-backend/internal/domain"
@@ -340,7 +341,17 @@ func Run(db *gorm.DB) error {
 			}
 		}
 	}
-
+	var adminCount int64
+	db.Model(&domain.AdminUser{}).Count(&adminCount)
+	if adminCount == 0 {
+		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+		admin := domain.AdminUser{
+			Username:     "admin",
+			PasswordHash: string(hashedPassword),
+			Role:         "admin",
+		}
+		db.Create(&admin)
+	}
 	log.Println("[seed] Tüm kategoriler ve fakültelere özel filtreli sorular başarıyla yüklendi")
 	return nil
 }
